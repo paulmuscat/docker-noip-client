@@ -3,7 +3,8 @@
 # however this is intended as a simpler, slightly more secure version;
 # I didn't want to have to use ENV or files to pass credentials, 
 # and using a Docker Secrets was slightly overkill for my use case.
-# On first deploy exec an interactive shell and run 'noip2 -C' for an interactive setup
+# On first deploy 'run -td' , and then exec an interactive shell and 
+# execute 'noip2 -C' for an interactive setup
 # then 'noip2 -d' to start the daemon running
  
 FROM alpine:latest As builder
@@ -35,7 +36,7 @@ RUN mkdir ${CONFDIR}
 RUN ln -sf /dev/stdout ${MESSAGELOG}
 WORKDIR /
 
+RUN syslogd
 RUN noip2 -h
 
-ENTRYPOINT syslogd
 
