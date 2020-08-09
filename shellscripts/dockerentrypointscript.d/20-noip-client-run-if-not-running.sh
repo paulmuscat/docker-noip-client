@@ -8,7 +8,7 @@
 #
 # echo "$(date -Is) ${HOSTNAME} ${0} is running..."
   CONFIGFILE=/usr/local/etc/no-ip2.conf 
-  NOIPUSER=noipclientuser
+  NOIPUSER=noipuser
   NOIPCLIENT=noip2
 
   if ps | grep -v grep | grep -v '\[' | grep -iq ${NOIPCLIENT} ; 
@@ -18,9 +18,9 @@
       else if [ -e ${CONFIGFILE} ] ;
                then 
                    echo "$(date -Is) ${HOSTNAME} Noip client \
-                          (NOIPCLIENT) does not appear to be running\
+                          (${NOIPCLIENT}) does not appear to be running\
                           . Attempting to start noip client..." ; 
-                   su ${NOIPUSER} {NOIPCLIENT} ;
+                   ( su ${NOIPUSER} -c ${NOIPCLIENT} ) ;
                    sleep 4;
 
                    if ps | grep -v grep | grep -v '\[' | \

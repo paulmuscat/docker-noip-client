@@ -17,7 +17,7 @@
 #
 # echo "$(date -Is) ${HOSTNAME} ${0} is running..."
   CONFIGFILE=/usr/local/etc/no-ip2.conf 
-  NOIPUSER=noipclientuser
+  NOIPUSER=noipuser
   NOIPCLIENT=noip2
   NOIPBINARY=/usr/local/bin/${NOIPCLIENT}
 
