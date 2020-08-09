@@ -72,7 +72,7 @@
 # If we aren't already running tail -f against the syslogd output, 
 # start it now. Using 'exec' replaces the currently running script, 
 # which should normally be running as pid 1 - this is what Docker 
-# tracks to determine whether to keep the conatiner alive.
+# tracks to determine whether to keep the container alive.
 #
    if  ps | grep -v grep | grep -iq "tail -f ${LOGFILE}" ; 
       then 
