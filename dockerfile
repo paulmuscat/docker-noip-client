@@ -31,7 +31,7 @@ RUN mkdir ${OUTDIR} ; \
     cp ${NOIPCLIENTBIN} ${OUTDIR} ;
 
 # ####################################################################
-# Build stage 
+# Run stage 
 #
 FROM alpine:latest
 
