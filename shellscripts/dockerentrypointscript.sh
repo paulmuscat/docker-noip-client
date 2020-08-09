@@ -33,7 +33,13 @@
 # Check syslogd is already running in case script is invoked in a 
 # context other than initial container startup.
 #
-  if  ps | grep -v grep | grep -iq syslogd ; 
+
+
+# ####################################################################
+# Check syslogd is already running in case script is invoked in a 
+# context other than initial container startup.
+#
+  if  ps | grep -v grep | grep -v '\[' | grep -iq syslogd ; 
       then 
            echo "$(date -Is) ${HOSTNAME} An instance of syslogd \
                   appears to already be running..." ; 
@@ -42,14 +48,14 @@
                   running. Attempting to start syslogd" ; 
            syslogd ; 
            sleep 1;
-           if ps | grep -v grep | grep -iq syslogd ; 
+           if ps | grep -v grep | grep -v '\[' | grep -iq syslogd ; 
                then
                     echo "$(date -Is) ${HOSTNAME} Syslogd is now \
                            running."
                else
                     echo "$(date -Is) ${HOSTNAME} Something \
                           seens to have gone wrong there: \
-                          Syslogd is still not running!"
+                          Syslogd is still not running!" 1>&2
            fi
   fi 
 
@@ -74,7 +80,7 @@
 # which should normally be running as pid 1 - this is what Docker 
 # tracks to determine whether to keep the container alive.
 #
-   if  ps | grep -v grep | grep -iq "tail -f ${LOGFILE}" ; 
+   if  ps | grep -v grep | grep -v '\[' | grep -iq "tail -f ${LOGFILE}" ;
       then 
            echo "$(date -Is) ${HOSTNAME} tail already following \
                   ${LOGFILE}..." ; 
