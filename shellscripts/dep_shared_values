@@ -1,0 +1,18 @@
+# Initialise variables with default values for dockerentrypointscript.sh
+# and subscripts.
+# To change behaviour, edit the defaults here, or else where the value
+# is intialised with the form "${NAME:-somevalue} set shell ( or
+# container) ENV values.
+#
+  LOGFILE="${LOGFILE:-/var/log/messages}"
+  SYSLOGDCONFFILE="${SYSLOGDCONFFILE:-/etc/syslog.conf}"
+  SYSLOGDAEMON="${SYSLOGDAEMON:-syslogd}"
+  SYSLOGDPIPECONF="${SYSLOGDPIPECONF:-*.*                            |${LOGFILE}}"
+  SYSLOGDFILECONF="${SYSLOGDFILECONF:-*.*                             ${LOGFILE}}"
+  LOGTOPIPE="${LOGTOPIPE:-true}"
+
+  NOIPCONFIGFILE="${NOIPCONFIGFILE:-/usr/local/etc/no-ip2.conf}"
+  NOIPUSER="${NOIPUSER:-noipuser}"
+  NOIPCLIENT="${NOIPCLIENT:-noip2}"
+  NOIPBINARY="${NOIPBINARY:-/usr/local/bin/${NOIPCLIENT}}"
+  

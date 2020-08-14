@@ -1,0 +1,194 @@
+# Common functions for entrypoint scripts
+# Busybox shell version of "export" is oldschool and therefore
+# doesn't support fancy bashisms like export of functions, so
+# include this as a library.
+
+
+# ####################################################################
+# Logging functions
+#
+# Executing script (or env) should set and export supply values for
+#    SYSLOGISRUNNING: "true" or "false"
+#    LOGFILE: path to log (file or pipe)
+# otherwise we fall back on logging to console.
+#
+  SYSLOGISRUNNING="${SYSLOGISRUNNING:-false}"
+  LOGFILE="${LOGFILE:-/var/log/messages}"
+
+  logswitch(){
+  # Call as "logswitch [severity#] message"
+  # If the first value is an integer it is interpereted as the
+  # required severity; anything at ERRORLIMIT or less is copied
+  # to stderr.
+  # If the syslog daemon is running, logs to syslog as user,
+  # informational. otherwise tries to write direct to the logfile
+  # and failing that, echoes to the console.
+  # (see RFC 5424 for the magic numbers for severity).
+  #
+	  local SEVERITY="5" 						# default is notice
+	  local ERRORLIMIT="3" 						# error
+	  local ECHOPREFIX="$(date -Is) ${HOSTNAME}"
+	  # validate severity 0..7 (emergency..debug)
+	  if [ "${1}" -le "7" ]  2> /dev/null && [ "${1}" -ge "0" ] ; then
+	       SEVERITY="${1}" ;
+		   shift ;
+	  fi
+      # If we've been told the logger is running, use that.
+	  if [ "${SYSLOGISRUNNING}" = "true" ] ; then
+	      logger -p "${SEVERITY}" "${@}";
+	  # Otherwise see if we can write directly to the log...
+	  else
+          # Important: only try to write to logfile directly if a
+          # regular file, not a pipe!
+		  if [ -f "${LOGFILE}" ] ; then
+			  echo "${ECHOPREFIX} ${@}" >> "${LOGFILE}" ;
+		  else
+			   # above error threshold stdout. (Below threhold goes
+			   # to stderr always anyway - no need to see it twice)
+			   if [ "${SEVERITY}" -gt "${ERRORLIMIT}" ] ; then
+			       echo "${ECHOPREFIX} ${@}" ;
+			   fi
+		  fi
+	  fi
+	  # at or below error threshold always echo to stderr
+	  if [ "${SEVERITY}" -le "${ERRORLIMIT}" ] ;  then
+          echo "${ECHOPREFIX} ${@}" 1>&2 ;
+	  fi
+  }
+
+  # curried logs...
+  logerror(){
+      logswitch "3" "${@}" ;
+  }
+
+  logwarning(){
+      logswitch "4" "${@}" ;
+  }
+
+  lognotice(){
+      logswitch "5" "${@}" ;
+  }
+
+  loginfo(){
+      logswitch "6" "${@}" ;
+  }
+
+  logdebug(){
+      logswitch "7" "${@}" ;
+  }
+
+# ####################################################################
+# Process related functions
+#
+  MSG_BADNUMPARAM="Incorrect number of arguments passed to function"
+  RTC_BADNUMPARAM="3"
+  MSG_STILLNOTRUNNING="still not found amongst running processes (apparently failed to start)."
+  RTC_STILLNOTRUNNING="4"
+
+  MSG_ALREADYRUNNING="There appears to already be a running process for"
+  MSG_NOTRUNNINGTRY="not found amongst running processes - will try to run"
+  MSG_NOWRUNNING="appears to have been started successfully."
+  MSC_COMMANDTRUE="was executed sucessfully."
+  MSC_COMMANDFALSE="was executed, but returned \"false\" (1)."
+  MSC_COMMANDNOTALLOWED="was executed, but returned a\"command invoked cannot execute\" error - might be permission or config issue?
+  Return code was"
+  MSC_COMMANDNOTFOUND="was executed, but returned a \"command not found\" error - might be syntax or build issue?
+  Return code was"
+  MSC_COMMANDMISCERROR="was executed, but returned an unknown error. Return code was"
+
+
+  processisrunning() {
+  # call ps to get the command used to initiate running processes and
+  # use grep to see if a process matching passed string is listed
+  # (not counting killed processes).
+  # Returns testable true or false (i.e. 0 or 1) rather than string
+  # or error (3) no user output unless error.
+  #
+      local FUNCNAME="processisrunning" ;
+	  if [ "${#}" -ne "1" ] ; then
+		  logerror "${MSG_BADNUMPARAM} ${FUNCNAMW}: expected 1, actual ${#}" ;
+		  return "${RTC_BADNUMPARAM}" ;
+	  fi
+	  if  ps  -o args | grep -vi -e 'grep' -e '\['  | grep -iq "${1}" ;  then
+		   true ;
+		   return "${?}" ;
+	  else
+		   false ;
+		   return "${?}" ;
+	  fi
+  }
+
+
+  ifnotrunningexecute(){
+  # Check for a running process running.
+  # If not running, try to execute the command passed, then check to see that.
+  # Logs progress.
+  # Returns true if process was already running, otherwise returns the result of the
+  # command or an error.
+  # Takes two parameters:
+  # the first is the process search string to check intially
+  # the second is the command to execute if the process isn't found.
+  # !!IMPORTANT!! naked variable $2 is executed.
+  #
+      local FUNCNAME="ifnotrunningexecute"
+      local TEMPRTC=""
+      if [ "${#}" -ne "2" ] ; then
+		  logerror "${MSG_BADNUMPARAM} ${FUNCNAMW}: expected 2, actual ${#}" ;
+		  return "${RTC_BADNUMPARAM}" ;
+	  fi
+	  if processisrunning "${1}"; then
+	      loginfo "${MSG_ALREADYRUNNING} ${1}" ;
+	      true;
+	      return "${?}" ;
+	  else
+	      loginfo "${1} ${MSG_NOTRUNNINGTRY} \"${2}\"" ;
+	      ${2} ;
+	      TEMPRTC="${?}"
+	      case "${TEMPRTC}" in
+	          "0")
+	              loginfo "${2} ${MSC_COMMANDTRUE}" ;
+	              ;;
+	          "1")
+	              lognotice "${2} ${MSC_COMMANDFALSE}" ;
+	              ;;
+	          "126")
+	              logerror "${2} ${MSC_COMMANDNOTALLOWED} ${TEMPRTC}." ;
+	              ;;
+	          "127")
+	              logerror "${2} ${MSC_COMMANDNOTFOUND} ${TEMPRTC}." ;
+	              ;;
+	          *)
+	              logerror "${2} ${MSC_COMMANDMISCERROR} ${TEMPRTC}." ;
+	              ;;
+	      esac ;
+      fi
+  }
+
+  selfstartifnotrunningandcheck() {
+  # Check for a running process running.
+  # If not running, try to execute the command passed, then check to see that.
+  # Logs progress.
+  # Returns true if process was already running, otherwise returns the result of the
+  # command or an error.
+  # Takes three parameters:
+  # The first is the process search string to check intially.
+  # The second is the command to execute if the process isn't found.
+  # The third is the wait time in seconds before re-running the intial test.
+  #
+      local FUNCNAME="selfstartifnotrunning" ;
+      if [ "${#}" -ne "3" ] ; then
+		  logerror "${MSG_BADNUMPARAM} ${FUNCNAMW}: expected 2, actual ${#}" ;
+		  return "${RTC_BADNUMPARAM}" ;
+	  fi
+
+      ifnotrunningexecute "${1}" "${2}" ;
+      sleep "${3}" ;
+	  if processisrunning "${1}"; then
+		  loginfo "${1} ${MSG_NOWRUNNING}" ;
+		  true;
+		  return "${?}" ;
+	  else
+		  logerror "${1} ${MSG_STILLNOTRUNNING}" ;
+		  return "${RTC_STILLNOTRUNNING}" ;
+	  fi
+   }

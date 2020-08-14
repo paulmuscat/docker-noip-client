@@ -1,39 +1,24 @@
 #!/bin/sh
 # ###################################################################
-# Docker entrypoint subscript for noip update container. 
+# Docker entrypoint subscript for noip update container.
 # Assumes running on Alpine with default build.
-# Checks for running noip client config file; if not found then 
+# Checks for running noip client config file; if not found then
 # attempts to run the client (if configured) as an unprivileged user
 # and checks for success.
 #
-# echo "$(date -Is) ${HOSTNAME} ${0} is running..."
-  CONFIGFILE=/usr/local/etc/no-ip2.conf 
-  NOIPUSER=noipuser
-  NOIPCLIENT=noip2
+  ENTRYPOINTFOLDER="${ENTRYPOINTFOLDER:-/etc/dockerentrypoint}"
+  ENTRYPOINTSUBFOLDER="${ENTRYPOINTSUBFOLDER:-${ENTRYPOINTFOLDER}/dockerentrypointscript.d}"
+  . "${ENTRYPOINTFOLDER}/dep_shared_values"
+  . "${ENTRYPOINTFOLDER}/dep_shared_functions"
 
-  if ps | grep -v grep | grep -v '\[' | grep -iq ${NOIPCLIENT} ; 
-      then 
-           echo "$(date -Is) ${HOSTNAME} An instance of the \
-           noip update client appears to be running already.";
-      else if [ -e ${CONFIGFILE} ] ;
-               then 
-                   echo "$(date -Is) ${HOSTNAME} Noip client \
-                          (${NOIPCLIENT}) does not appear to be running\
-                          . Attempting to start noip client..." ; 
-                   ( su ${NOIPUSER} -c ${NOIPCLIENT} ) ;
-                   sleep 4;
+  MSG_NCONFIGYET="Configuration file not found at ${NOIPCONFIGFILE}, so not attempting to run client."
 
-                   if ps | grep -v grep | grep -v '\[' | \
-                      grep -iq ${NOIPCLIENT} ; 
-                       then
-                           echo "$(date -Is) ${HOSTNAME} Noip \
-                                 client now running."
-                       else
-                           echo "$(date -Is) ${HOSTNAME} Something \
-                                 seens to have gone wrong there: \
-                                 Noip client is still not running."
-                   # separate script should cover the else fork. 
-                   fi
-           fi
+# If it looks like config has already been done, check if the
+# client is already running - try to start it if it isn't.
+#
+  if [ -e "${NOIPCONFIGFILE}" ] ; then
+      selfstartifnotrunningandcheck "${NOIPCLIENT}" "${NOIPBINARY}" "3" ;
+  # separate script should cover the else fork.
+  else
+     loginfo "${MSG_NCONFIGYET}"
   fi
-
