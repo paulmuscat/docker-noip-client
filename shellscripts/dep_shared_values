@@ -15,4 +15,4 @@
   NOIPUSER="${NOIPUSER:-noipuser}"
   NOIPCLIENT="${NOIPCLIENT:-noip2}"
   NOIPBINARY="${NOIPBINARY:-/usr/local/bin/${NOIPCLIENT}}"
-  
+  NOIPINITCMD="su ${NOIPUSER} -c ${NOIPBINARY}"

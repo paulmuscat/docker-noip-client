@@ -2,7 +2,10 @@
 
 Docker container based No-IP dynamic DNS update client, based on Alpine linux (https://wiki.alpinelinux.org) and the official No-IP linux dynamic update client (https://www.noip.com/download?page=linux).
 
-This version requires the user to complete configuration by attaching an interactive terminal to the running container.
+This version requires the user to complete configuration by attaching an interactive terminal to the running container, then restarting the container; from the command line (in linux) something like:
+"docker exec -ti <<container name>> noip2 -C && docker container restart <<container name>>"
+should do the trick.
+
 The client will ask for username, password, target group/domain and polling frequency. 
 The client only updates when the stored IP address from the prior update doesn't match the IP presented by ip1.dynupdate.no-ip.com. 
 Subsequently the container can be committed and/or stopped and restarted as needed.

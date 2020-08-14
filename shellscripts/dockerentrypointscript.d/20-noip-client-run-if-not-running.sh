@@ -17,7 +17,7 @@
 # client is already running - try to start it if it isn't.
 #
   if [ -e "${NOIPCONFIGFILE}" ] ; then
-      selfstartifnotrunningandcheck "${NOIPCLIENT}" "${NOIPBINARY}" "3" ;
+      selfstartifnotrunningandcheck "${NOIPCLIENT}" "${NOIPINITCMD}" "3" ;
   # separate script should cover the else fork.
   else
      loginfo "${MSG_NCONFIGYET}"
